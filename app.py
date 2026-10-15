@@ -88,12 +88,21 @@ with st.sidebar:
 
 
 # ─── Top form — start a new review ─────────────────────────────────────────
+col_demo1, col_demo2 = st.columns(2)
+if col_demo1.button("📋 Chọn nhanh PR #1 (Thêm trường Priority - Human Approval)", use_container_width=True):
+    st.session_state.pr_url = "https://github.com/VinUni-AI20k/PR-Demo/pull/1"
+    st.rerun()
+if col_demo2.button("⚠️ Chọn nhanh PR #2 (Lỗi bảo mật - Escalation)", use_container_width=True):
+    st.session_state.pr_url = "https://github.com/VinUni-AI20k/PR-Demo/pull/2"
+    st.rerun()
+
 with st.form("start"):
     pr_url = st.text_input(
         "PR URL", value=st.session_state.pr_url,
         placeholder="https://github.com/VinUni-AI20k/PR-Demo/pull/1",
+        help="Lưu ý: Phải là link Pull Request (kết thúc bằng /pull/<số>), không phải link repo .git"
     )
-    submitted = st.form_submit_button("Run review")
+    submitted = st.form_submit_button("Run review", type="primary")
 
 
 # ─── Renderers per interrupt kind ──────────────────────────────────────────
@@ -165,13 +174,16 @@ if submitted and pr_url:
     st.session_state.interrupt_payload = None
     st.session_state.final = None
 
-    with st.spinner("Fetching PR + asking the LLM..."):
-        result = asyncio.run(run_graph(pr_url, st.session_state.thread_id))
+    try:
+        with st.spinner("Fetching PR + asking the LLM..."):
+            result = asyncio.run(run_graph(pr_url, st.session_state.thread_id))
 
-    if "__interrupt__" in result:
-        st.session_state.interrupt_payload = result["__interrupt__"][0].value
-    else:
-        st.session_state.final = result
+        if "__interrupt__" in result:
+            st.session_state.interrupt_payload = result["__interrupt__"][0].value
+        else:
+            st.session_state.final = result
+    except Exception as e:
+        st.error(f"Lỗi: {e}. Vui lòng nhập đúng đường dẫn Pull Request (ví dụ: `https://github.com/VinUni-AI20k/PR-Demo/pull/1`).")
 
 # Render the current interrupt card, if any
 payload = st.session_state.interrupt_payload
